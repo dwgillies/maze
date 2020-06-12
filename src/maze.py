@@ -1,3 +1,4 @@
+#!/usr/bin/python
 from __future__ import print_function
 import random
 import sys
@@ -21,12 +22,12 @@ n = 30     # maze of 30 rows, 30 columns
 k = 30
 
 def rand():
-  return random.getrandbits(10) > 900
+  return random.getrandbits(10) > 550
 
 def always():
   return 1
 
-def new_maze(func):
+def new_random_maze(func):
   global vwall, hwall
 
   #              === columns ===      x   == rows ===
@@ -37,7 +38,7 @@ def new_perfect_maze(debug = False):
   global vwall, hwall
   # a perfect maze has only ONE path from point A to point B.
   # we start with a maze that is 100% filled with walls !!
-  new_maze(always)
+  new_random_maze(always)
   #
   # now we make an n x k matrix with a unique number in each cell.
   # the number represents where we can walk from here (nowhere).
@@ -81,7 +82,7 @@ def new_perfect_maze(debug = False):
     if col + delta_col not in range(0, k): continue
 
     # is there already a path from (row,col) to the adjacent cell?
-    # note: There are only (row - 1) * (col - 1) walls and this 
+    # note: There are only (row - 1) * (col - 1) walls and this
     # should be improved to sample all walls without replacement.
     if map[row][col] == map[row + delta_row][col + delta_col]:
       continue
@@ -156,7 +157,13 @@ if len(sys.argv) > 1:
   n = int(sys.argv[1])
 if len(sys.argv) > 2:
   k = int(sys.argv[2])
+if len(sys.argv) > 3:
+  type = sys.argv[3]
 
-new_perfect_maze(False)
+if (type == 'random'):
+  new_random_maze(rand)
+else:
+  new_perfect_maze(False)
+
 add_walls()
 print_maze()
