@@ -17,4 +17,4 @@ Usage:
 
 $ maze.py 20 40          # produces a 20x40 maze
 
-$ maze.py 20 20 random   # produces a random maze with 55% of edges present.
+$ maze.py 20 20 random   # produces a random maze with 45% of edges present.
