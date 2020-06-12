@@ -17,8 +17,8 @@ import sys
 #   so the maze needs (n+1) above/below walls (times k columns)
 #   and the maze needs (k+1) left/right walls (times n rows)
 
-n = 40     # maze of 20 rows, 30 columns
-k = 40
+n = 30     # maze of 30 rows, 30 columns
+k = 30
 
 def rand():
   return random.getrandbits(10) > 900
@@ -29,7 +29,7 @@ def always():
 def new_maze(func):
   global vwall, hwall
 
-  #              === columns ===                          x   == rows ===
+  #              === columns ===      x   == rows ===
   hwall = [ [ func() for i in range(k)] for j in range(n+1) ]
   vwall = [ [ func() for i in range(k+1)] for j in range(n) ]
 
@@ -43,13 +43,14 @@ def new_perfect_maze(debug = False):
   # the number represents where we can walk from here (nowhere).
   global map
   map = [ [ 0 for i in range(k) ] for j in range(n) ]
+  # use 3-digit markers ("count") so debug mazes < 900 cells have all cells 3 chars wide.
   count = 100
   for i in range(n):
     for j in range(k):
       map[i][j] = count
       count = count + 1
   #
-  # now pick a random pair of adjecnt cell.  direction =
+  # these compass points represent an adjacent cell.  direction =
   #    north(0), south(1), east(2), west(3)
   NORTH = 0
   SOUTH = 1
@@ -80,10 +81,12 @@ def new_perfect_maze(debug = False):
     if col + delta_col not in range(0, k): continue
 
     # is there already a path from (row,col) to the adjacent cell?
+    # note: There are only (row - 1) * (col - 1) walls and this 
+    # should be improved to sample all walls without replacement.
     if map[row][col] == map[row + delta_row][col + delta_col]:
       continue
 
-    # else figure out where it is and delete the wall.
+    # else find and delete the wall separating both cells.
     if direction == NORTH:
       hwall[row][col] = 0
     if direction == SOUTH:
@@ -94,10 +97,10 @@ def new_perfect_maze(debug = False):
       vwall[row][col] = 0
 
     # now merge the markers of both cells, to yield 1 less marker.
-    # whatever marker we find in map[row,col], it will replace the
-    # all markers fo the type map[row + delta_row, col + delta_col]
+    # whatever marker we find in map[row,col], it will be replaced by
+    # the value of the marker in map[row + delta_row, col + delta_col]
     # indicating there is now a path from each cell on one side of the
-    # wall to each cell on the other side of the deleted wall.
+    # removed wall to each cell on the other side of the removed wall.
     marker = map[row][col]
     new_marker = map[row + delta_row][col + delta_col]
     if (debug):
