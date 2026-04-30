@@ -1,5 +1,4 @@
-#!/usr/bin/python
-from __future__ import print_function
+#!/usr/bin/env python3
 import random
 import sys
 
@@ -22,7 +21,7 @@ n = 30     # maze of 30 rows, 30 columns
 k = 30
 
 def rand():
-  return random.getrandbits(10) > 550
+  return random.random() < 0.45
 
 def always():
   return 1
@@ -42,13 +41,13 @@ def new_perfect_maze(debug = False):
   #
   # now we make an n x k matrix with a unique number in each cell.
   # the number represents where we can walk from here (nowhere).
-  global map
-  map = [ [ 0 for i in range(k) ] for j in range(n) ]
+  global grid
+  grid = [ [ 0 for i in range(k) ] for j in range(n) ]
   # use 3-digit markers ("count") so debug mazes < 900 cells have all cells 3 chars wide.
   count = 100
   for i in range(n):
     for j in range(k):
-      map[i][j] = count
+      grid[i][j] = count
       count = count + 1
   #
   # these compass points represent an adjacent cell.  direction =
@@ -77,14 +76,14 @@ def new_perfect_maze(debug = False):
     # get the change to the adjacent cell
     (delta_row, delta_col) = deltas[direction]
 
-    # would the adjacent cell take us off the map?
-    if row + delta_row not in range(0, n): continue
-    if col + delta_col not in range(0, k): continue
+    # would the adjacent cell take us off the grid?
+    if not (0 <= row + delta_row < n): continue
+    if not (0 <= col + delta_col < k): continue
 
     # is there already a path from (row,col) to the adjacent cell?
-    # note: There are only (row - 1) * (col - 1) walls and this
+    # note: There are n*(k-1) + k*(n-1) interior walls and this
     # should be improved to sample all walls without replacement.
-    if map[row][col] == map[row + delta_row][col + delta_col]:
+    if grid[row][col] == grid[row + delta_row][col + delta_col]:
       continue
 
     # else find and delete the wall separating both cells.
@@ -98,19 +97,19 @@ def new_perfect_maze(debug = False):
       vwall[row][col] = 0
 
     # now merge the markers of both cells, to yield 1 less marker.
-    # whatever marker we find in map[row,col], it will be replaced by
-    # the value of the marker in map[row + delta_row, col + delta_col]
+    # whatever marker we find in grid[row,col], it will be replaced by
+    # the value of the marker in grid[row + delta_row, col + delta_col]
     # indicating there is now a path from each cell on one side of the
     # removed wall to each cell on the other side of the removed wall.
-    marker = map[row][col]
-    new_marker = map[row + delta_row][col + delta_col]
+    marker = grid[row][col]
+    new_marker = grid[row + delta_row][col + delta_col]
     if (debug):
       print("combining ", marker, new_marker)
 
     for i in range(n):
       for j in range(k):
-        if map[i][j] == marker:
-          map[i][j] = new_marker
+        if grid[i][j] == marker:
+          grid[i][j] = new_marker
 
     if (debug):
       print('')
@@ -144,9 +143,9 @@ def print_maze(debug = False):
         else:
           if col < k:
             if vwall[row][col] > 0:
-              print('|' + str(map[row][col]), end='')
+              print('|' + str(grid[row][col]), end='')
             else:
-              print(' ' + str(map[row][col]), end='')
+              print(' ' + str(grid[row][col]), end='')
           else:
             print( '|   ' if vwall[row][col] > 0 else '    ', end='')
       print('')
