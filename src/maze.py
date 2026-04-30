@@ -72,7 +72,7 @@ def new_perfect_maze(debug = False):
     col = random.randrange(0, k)
 
     # pick a random 4-compass points direction
-    direction = random.randrange(0, 3)
+    direction = random.randrange(0, 4)
 
     # get the change to the adjacent cell
     (delta_row, delta_col) = deltas[direction]
@@ -153,14 +153,15 @@ def print_maze(debug = False):
 
 
 # new_maze(rand)
+maze_type = 'perfect'
 if len(sys.argv) > 1:
   n = int(sys.argv[1])
 if len(sys.argv) > 2:
   k = int(sys.argv[2])
 if len(sys.argv) > 3:
-  type = sys.argv[3]
+  maze_type = sys.argv[3]
 
-if (type == 'random'):
+if (maze_type == 'random'):
   new_random_maze(rand)
 else:
   new_perfect_maze(False)
