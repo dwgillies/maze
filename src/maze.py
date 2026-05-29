@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+import argparse
 import random
-import sys
 
 # program to generate a maze.
 #
@@ -17,8 +17,8 @@ import sys
 #   so the maze needs (n+1) above/below walls (times k columns)
 #   and the maze needs (k+1) left/right walls (times n rows)
 
-n = 30     # maze of 30 rows, 30 columns
-k = 30
+DEFAULT_ROWS = 30
+DEFAULT_COLS = 30
 
 def rand():
   return random.random() < 0.45
@@ -26,29 +26,27 @@ def rand():
 def always():
   return 1
 
-def new_random_maze(func):
-  global vwall, hwall
-
+def new_random_maze(rows, cols, func):
   #              === columns ===      x   == rows ===
-  hwall = [ [ func() for i in range(k)] for j in range(n+1) ]
-  vwall = [ [ func() for i in range(k+1)] for j in range(n) ]
+  hwall = [ [ func() for i in range(cols)] for j in range(rows+1) ]
+  vwall = [ [ func() for i in range(cols+1)] for j in range(rows) ]
+  return hwall, vwall
 
-def new_perfect_maze(debug = False):
-  global vwall, hwall
+def new_perfect_maze(rows, cols, debug = False):
   # a perfect maze has only ONE path from point A to point B.
   # we start with a maze that is 100% filled with walls !!
-  new_random_maze(always)
+  hwall, vwall = new_random_maze(rows, cols, always)
   #
   # now we make an n x k matrix with a unique number in each cell.
   # the number represents where we can walk from here (nowhere).
-  global grid
-  grid = [ [ 0 for i in range(k) ] for j in range(n) ]
+  grid = [ [ 0 for i in range(cols) ] for j in range(rows) ] if debug else None
   # use 3-digit markers ("count") so debug mazes < 900 cells have all cells 3 chars wide.
   count = 100
-  for i in range(n):
-    for j in range(k):
-      grid[i][j] = count
-      count = count + 1
+  if debug:
+    for i in range(rows):
+      for j in range(cols):
+        grid[i][j] = count
+        count = count + 1
   #
   # these compass points represent an adjacent cell.  direction =
   #    north(0), south(1), east(2), west(3)
@@ -62,28 +60,46 @@ def new_perfect_maze(debug = False):
   #         north   south     east   west
   deltas = [(-1, 0), (1, 0), (0, 1), (0, -1)]
 
+  parent = [i for i in range(rows * cols)]
+
+  def cell_id(row, col):
+    return row * cols + col
+
+  def find(cell):
+    while parent[cell] != cell:
+      parent[cell] = parent[parent[cell]]
+      cell = parent[cell]
+    return cell
+
+  def union(cell, other):
+    cell_root = find(cell)
+    other_root = find(other)
+    if cell_root == other_root:
+      return False
+    parent[cell_root] = other_root
+    return True
+
   if (debug):
-    print_maze(debug = True)
+    print_maze(rows, cols, hwall, vwall, grid, debug = True)
 
-  while (count > 101):
-    # pick a random cell
-    row = random.randrange(0, n)
-    col = random.randrange(0, k)
+  walls = []
+  for row in range(rows):
+    for col in range(cols):
+      if row > 0:
+        walls.append((row, col, NORTH))
+      if col > 0:
+        walls.append((row, col, WEST))
+  random.shuffle(walls)
 
-    # pick a random 4-compass points direction
-    direction = random.randrange(0, 4)
-
-    # get the change to the adjacent cell
+  remaining_groups = rows * cols
+  while remaining_groups > 1:
+    (row, col, direction) = walls.pop()
     (delta_row, delta_col) = deltas[direction]
-
-    # would the adjacent cell take us off the grid?
-    if not (0 <= row + delta_row < n): continue
-    if not (0 <= col + delta_col < k): continue
+    adjacent_row = row + delta_row
+    adjacent_col = col + delta_col
 
     # is there already a path from (row,col) to the adjacent cell?
-    # note: There are n*(k-1) + k*(n-1) interior walls and this
-    # should be improved to sample all walls without replacement.
-    if grid[row][col] == grid[row + delta_row][col + delta_col]:
+    if not union(cell_id(row, col), cell_id(adjacent_row, adjacent_col)):
       continue
 
     # else find and delete the wall separating both cells.
@@ -96,52 +112,44 @@ def new_perfect_maze(debug = False):
     if direction == WEST:
       vwall[row][col] = 0
 
-    # now merge the markers of both cells, to yield 1 less marker.
-    # whatever marker we find in grid[row,col], it will be replaced by
-    # the value of the marker in grid[row + delta_row, col + delta_col]
-    # indicating there is now a path from each cell on one side of the
-    # removed wall to each cell on the other side of the removed wall.
-    marker = grid[row][col]
-    new_marker = grid[row + delta_row][col + delta_col]
     if (debug):
+      # Merge debug markers so the printed trace shows connected regions.
+      marker = grid[row][col]
+      new_marker = grid[adjacent_row][adjacent_col]
       print("combining ", marker, new_marker)
+      for i in range(rows):
+        for j in range(cols):
+          if grid[i][j] == marker:
+            grid[i][j] = new_marker
 
-    for i in range(n):
-      for j in range(k):
-        if grid[i][j] == marker:
-          grid[i][j] = new_marker
-
-    if (debug):
       print('')
-      print_maze(True)
-    count = count - 1
+      print_maze(rows, cols, hwall, vwall, grid, True)
+    remaining_groups = remaining_groups - 1
 
-def add_walls():
-  global vwall, hwall
+  return hwall, vwall, grid
 
-  for i in range(n):
+def add_walls(rows, cols, hwall, vwall):
+  for i in range(rows):
     vwall[i][0] = 1
     vwall[i][len(vwall[0]) - 1] = 1
 
-  for i in range(k):
+  for i in range(cols):
     hwall[0][i] = 1
     hwall[len(hwall) - 1][i] = 1
 
-def print_maze(debug = False):
-  global vwall, hwall
-
-  for row in range(0, n + 1):
-    for col in range(0, k):
+def print_maze(rows, cols, hwall, vwall, grid = None, debug = False):
+  for row in range(0, rows + 1):
+    for col in range(0, cols):
       print('+', end='')
       print( '===' if hwall[row][col] > 0 else '   ', end='')
     print('+')
 
-    if row != n:      # there are only n rows of vertical walls.
-      for col in range(0, k + 1):
+    if row != rows:      # there are only n rows of vertical walls.
+      for col in range(0, cols + 1):
         if not debug:
           print( '|   ' if vwall[row][col] > 0 else '    ', end='')
         else:
-          if col < k:
+          if col < cols:
             if vwall[row][col] > 0:
               print('|' + str(grid[row][col]), end='')
             else:
@@ -151,19 +159,33 @@ def print_maze(debug = False):
       print('')
 
 
-# new_maze(rand)
-maze_type = 'perfect'
-if len(sys.argv) > 1:
-  n = int(sys.argv[1])
-if len(sys.argv) > 2:
-  k = int(sys.argv[2])
-if len(sys.argv) > 3:
-  maze_type = sys.argv[3]
+def positive_int(value):
+  try:
+    number = int(value)
+  except ValueError:
+    raise argparse.ArgumentTypeError("must be an integer")
+  if number < 1:
+    raise argparse.ArgumentTypeError("must be at least 1")
+  return number
 
-if (maze_type == 'random'):
-  new_random_maze(rand)
-else:
-  new_perfect_maze(False)
+def parse_args():
+  parser = argparse.ArgumentParser(description="Generate random mazes.")
+  parser.add_argument("rows", nargs="?", type=positive_int, default=DEFAULT_ROWS)
+  parser.add_argument("cols", nargs="?", type=positive_int, default=DEFAULT_COLS)
+  parser.add_argument("maze_type", nargs="?", choices=["perfect", "random"], default="perfect")
+  return parser.parse_args()
 
-add_walls()
-print_maze()
+def main():
+  args = parse_args()
+
+  if (args.maze_type == 'random'):
+    hwall, vwall = new_random_maze(args.rows, args.cols, rand)
+    grid = None
+  else:
+    hwall, vwall, grid = new_perfect_maze(args.rows, args.cols, False)
+
+  add_walls(args.rows, args.cols, hwall, vwall)
+  print_maze(args.rows, args.cols, hwall, vwall, grid)
+
+if __name__ == "__main__":
+  main()
